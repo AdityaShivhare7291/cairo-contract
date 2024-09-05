@@ -19,4 +19,4 @@ build-external-contracts = ["kill_switch::KillSwitch"]
 snforge_std = { git = "https://github.com/foundry-rs/starknet-foundry.git", tag = "v0.23.0" }
 
 [scripts]
-test = "snforge test"
+test = "snforge test "

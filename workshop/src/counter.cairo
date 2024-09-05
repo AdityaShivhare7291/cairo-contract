@@ -1,3 +1,29 @@
+use starknet::{SyscallResultTrait, ContractAddress, syscalls};
+use core::serde::Serde;  // Importing Serde trait
+
+#[starknet::interface]
+trait IKillSwitchTrait<T> {
+    fn is_active(self: @T) -> bool;
+}
+
+#[derive(Copy, Drop, starknet::Store, Serde)]  // Use appropriate Serde implementation
+struct IKillSwitch {
+    contract_address: ContractAddress,
+}
+
+impl IKillSwitchImpl of IKillSwitchTrait<IKillSwitch> {
+    fn is_active(self: @IKillSwitch) -> bool {
+        let mut call_data: Array<felt252> = ArrayTrait::new();
+        let contract_address: ContractAddress = *self.contract_address;
+        let mut res = syscalls::call_contract_syscall(
+            contract_address, selector!("is_active"), call_data.span()
+        )
+        .unwrap_syscall();
+
+        Serde::<bool>::deserialize(ref res).unwrap()  // Specify which Serde to use
+    }
+}
+
 #[starknet::interface]
 trait ICounter<TContractState> {
     fn get_counter(self: @TContractState) -> u32;

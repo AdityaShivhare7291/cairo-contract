@@ -2,6 +2,11 @@
 version = 1
 
 [[package]]
+name = "kill_switch"
+version = "0.1.0"
+source = "git+https://github.com/starknet-edu/kill-switch.git#eb11d5580807280f0c7e7a38db1f468e7f50dad8"
+
+[[package]]
 name = "snforge_scarb_plugin"
 version = "0.1.0"
 source = "registry+https://scarbs.xyz/"
@@ -20,5 +25,6 @@ dependencies = [
 name = "workshop"
 version = "0.1.0"
 dependencies = [
+ "kill_switch",
  "snforge_std",
 ]

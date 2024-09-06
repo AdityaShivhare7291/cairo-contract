@@ -1,55 +1,28 @@
-use starknet::{SyscallResultTrait, ContractAddress, syscalls};
-use core::serde::Serde;  // Importing Serde trait
-
-// Ensure you're only using the relevant Serde trait implementation.
-// Use either one of these, not both:
- use core::starknet::secp256k1::Secp256k1PointSerde;  // Uncomment if using starknet's Serde
-// use openzeppelin::account::utils::secp256k1::Secp256k1PointSerde;  // Uncomment if using openzeppelin's Serde
 
 #[starknet::interface]
-trait IKillSwitchTrait<T> {
-    fn is_active(self: @T) -> bool;
-}
-
-#[derive(Copy, Drop, starknet::Store, Serde)]  // Use appropriate Serde implementation
-struct IKillSwitch {
-    contract_address: ContractAddress,
-}
-
-impl IKillSwitchImpl of IKillSwitchTrait<IKillSwitch> {
-    fn is_active(self: @IKillSwitch) -> bool {
-        let mut call_data: Array<felt252> = ArrayTrait::new();
-        let contract_address: ContractAddress = *self.contract_address;
-        let mut res = syscalls::call_contract_syscall(
-            contract_address, selector!("is_active"), call_data.span()
-        )
-        .unwrap_syscall();
-
-        Serde::<bool>::deserialize(ref res).unwrap()  // Specify which Serde to use
-    }
+trait IKillSwitch<TContractState> {
+    fn is_active(self: @TContractState) -> bool;
 }
 
 #[starknet::interface]
-pub trait ICounter<TContractState> {
+trait ICounter<TContractState> {
     fn get_counter(self: @TContractState) -> u32;
     fn increase_counter(ref self: TContractState);
 }
 
 #[starknet::contract]
-mod Counter {
+mod counter_contract {
     use openzeppelin::access::ownable::OwnableComponent;
-    use core::traits::Into;
-    use core::starknet::event::EventEmitter;
+    use super::{IKillSwitchDispatcher, IKillSwitchDispatcherTrait};
     use starknet::ContractAddress;
-    use super::IKillSwitchTrait;
-    use super::IKillSwitch;
 
     component!(path: OwnableComponent, storage: ownable, event: OwnableEvent);
 
+    // Ownable Mixin
     #[abi(embed_v0)]
-    impl OwnableImpl = OwnableComponent::OwnableImpl<ContractState>;
+    impl OwnableMixinImpl = OwnableComponent::OwnableMixinImpl<ContractState>;
     impl InternalImpl = OwnableComponent::InternalImpl<ContractState>;
-
+    
     #[storage]
     struct Storage {
         counter: u32,
@@ -58,50 +31,45 @@ mod Counter {
         ownable: OwnableComponent::Storage
     }
 
+    #[event]
+    #[derive(Drop, starknet::Event)]  // Updated derive macro
+    pub enum Event {
+        CounterIncreased: CounterIncrease,
+        #[flat]
+        OwnableEvent: OwnableComponent::Event
+    }
+
+    #[derive(Drop, starknet::Event)]  // Updated derive macro
+    pub struct CounterIncrease {
+        #[key]
+        pub counter: u32
+    }
+
     #[constructor]
-    fn constructor(
-        ref self: ContractState,
-        initial_counter: u32,
-        kill_switch: ContractAddress,
-        initial_owner: ContractAddress
-    ) {
-        self.counter.write(initial_counter);
-        self.kill_switch.write(kill_switch);
+    fn constructor(ref self: ContractState, init_value: u32, kill_switch_address: ContractAddress, initial_owner: ContractAddress) {
+        self.counter.write(init_value);
+        self.kill_switch.write(kill_switch_address);
         self.ownable.initializer(initial_owner);
     }
 
-    #[event]
-    #[derive(Drop, starknet::Event)]
-    enum Event {
-        CounterIncreased: CounterIncrease,
-        #[flat]
-        OwnableEvent: OwnableComponent::Event,
-    }
-
-    #[derive(Drop, starknet::Event)]
-    struct CounterIncrease {
-        #[key]
-        counter: u32,
-    }
-
     #[abi(embed_v0)]
-    impl CounterImpl of super::ICounter<ContractState> {
+    impl counter_contract of super::ICounter<ContractState> {
         fn get_counter(self: @ContractState) -> u32 {
             self.counter.read()
         }
 
         fn increase_counter(ref self: ContractState) {
             self.ownable.assert_only_owner();
-            let kill_switch_address = self.kill_switch.read();
-            let is_active = IKillSwitch { contract_address: kill_switch_address }.is_active();
+            
+            let kill_switch_dispatcher = IKillSwitchDispatcher {
+                contract_address: self.kill_switch.read()
+            };
 
-            // Ensure the Kill Switch is active
-            assert!(is_active, "Kill Switch is active");
+            assert!(!kill_switch_dispatcher.is_active(), "Kill Switch is active");
+            let incremented_counter = self.counter.read() + 1;
+            self.counter.write(incremented_counter);
 
-            let previous_counter = self.counter.read();
-            let current_counter = previous_counter + 1;
-            self.counter.write(current_counter);
-            self.emit(CounterIncrease { counter: current_counter });
+            self.emit(Event::CounterIncreased(CounterIncrease { counter: self.counter.read() }));
         }
     }
 }

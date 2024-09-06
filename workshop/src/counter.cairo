@@ -41,8 +41,9 @@ mod counter_contract {
     }
 
     #[constructor]
-    fn constructor(ref self: ContractState, initial_value: u32) {
+    fn constructor(ref self: ContractState, initial_value: u32,kill_switch: ContractAddress) {
         self.counter.write(initial_value.into());
+        self.kill_switch.write(kill_switch);
     }
 
     // Define the event that will be emitted when the counter is increased

@@ -7,16 +7,24 @@ edition = "2023_01"
 
 [dependencies]
 starknet = ">=2.6.4"
-kill_switch = {git = "https://github.com/starknet-edu/kill-switch.git" }
-openzeppelin = { git = "https://github.com/OpenZeppelin/cairo-contracts.git", tag = "v0.14.0" }
+snforge_std = { git = "https://github.com/foundry-rs/starknet-foundry.git", tag = "v0.26.0" }
+kill_switch = { git = "https://github.com/starknet-edu/kill-switch.git" }
+openzeppelin = { git = "https://github.com/OpenZeppelin/cairo-contracts.git", tag = "v0.16.0" }
+cairo_test = { version = "2.8.0", features = ["std"] }
 
 [[target.starknet-contract]]
-casm = true
-sierra = true
 build-external-contracts = ["kill_switch::KillSwitch"]
 
-[dev-dependencies]
-snforge_std = { git = "https://github.com/foundry-rs/starknet-foundry.git", tag = "v0.23.0" }
+# Enable Sierra codegen.
+sierra = true
 
-[scripts]
-test = "snforge test "
+# Enable CASM codegen.
+casm = true
+
+
+
+
+[profile.dev.scripts]
+test = "snforge test"
+
+

@@ -1,5 +1,16 @@
 {
+  "name": "counter-workshop",
+  "private": "true",
+  "scripts": {
+    "deploy": "ts-node ./Counter_workshop-main/scripts/deploy.ts"
+  },
   "dependencies": {
-    "starknet": "^6.11.0"
+    "@tsconfig/node21": "21.0.1",
+    "dotenv": "16.4.1",
+    "path": "^0.12.7",
+    "starknet": "^6.7.0",
+    "ts-node": "10.9.2",
+    "tslib": "^2.6.2",
+    "typescript": "5.3.3"
   }
 }
